@@ -6,9 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / '.env')
 
-GTFS_ZIP = os.getenv('GTFS_PATH')
-if not GTFS_ZIP:
-    raise RuntimeError('GTFS_PATH not set in .env')
+# Usar ruta directa al archivo GTFS
+GTFS_ZIP = Path(__file__).resolve().parents[1] / 'example.gtfs.zip'
+if not GTFS_ZIP.exists():
+    raise RuntimeError(f'GTFS file not found at {GTFS_ZIP}')
 
 # Temporary extraction directory
 extract_dir = Path('gtfs_extracted')
@@ -21,13 +22,13 @@ extract_dir.mkdir(parents=True)
 with zipfile.ZipFile(GTFS_ZIP, 'r') as zip_ref:
     zip_ref.extractall(extract_dir)
 
-# Database connection
+# Database connection - usar credenciales directas
 conn = psycopg2.connect(
-    host=os.getenv('DB_HOST', 'localhost'),
-    port=int(os.getenv('DB_PORT', 5432)),
-    dbname=os.getenv('DB_NAME', 'MuseosCochabamba'),
-    user=os.getenv('DB_USER', 'postgres'),
-    password=os.getenv('DB_PASS', ''),
+    host='localhost',
+    port=5432,
+    dbname='MuseosCochabamba',
+    user='postgres',
+    password='1234',
 )
 
 cur = conn.cursor()
@@ -43,7 +44,7 @@ def copy_csv(table_name, csv_path, columns=None):
             cols = columns
         f.seek(0)
         cur.copy_expert(
-            f"COPY {table_name} ({', '.join(cols)}) FROM STDIN WITH CSV HEADER QUOTE '"'"' DELIMITER ','",
+            f"COPY {table_name} ({', '.join(cols)}) FROM STDIN WITH CSV HEADER DELIMITER ','",
             f,
         )
         print(f'Loaded {table_name} from {csv_path}')

@@ -1,31 +1,22 @@
--- GTFS tables schema (PostgreSQL)
+-- GTFS tables schema (PostgreSQL) - Ajustado para example.gtfs.zip
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Agencies
 CREATE TABLE IF NOT EXISTS agency (
     agency_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    url TEXT,
-    timezone TEXT,
-    language TEXT,
-    phone TEXT,
-    fare_url TEXT,
-    email TEXT
+    agency_name TEXT NOT NULL,
+    agency_timezone TEXT,
+    agency_url TEXT
 );
 
 -- Stops
 CREATE TABLE IF NOT EXISTS stops (
     stop_id TEXT PRIMARY KEY,
     stop_name TEXT NOT NULL,
-    stop_desc TEXT,
     stop_lat DOUBLE PRECISION NOT NULL,
     stop_lon DOUBLE PRECISION NOT NULL,
-    zone_id TEXT,
-    stop_url TEXT,
-    location_type INTEGER,
-    parent_station TEXT,
-    wheelchair_boarding INTEGER
+    stop_desc TEXT
 );
 
 -- Routes
@@ -34,12 +25,8 @@ CREATE TABLE IF NOT EXISTS routes (
     agency_id TEXT REFERENCES agency(agency_id),
     route_short_name TEXT,
     route_long_name TEXT,
-    route_desc TEXT,
-    route_type INTEGER,
-    route_url TEXT,
     route_color TEXT,
-    route_text_color TEXT,
-    route_sort_order INTEGER
+    route_type INTEGER
 );
 
 -- Trips
@@ -47,13 +34,9 @@ CREATE TABLE IF NOT EXISTS trips (
     trip_id TEXT PRIMARY KEY,
     route_id TEXT REFERENCES routes(route_id),
     service_id TEXT,
-    trip_headsign TEXT,
-    trip_short_name TEXT,
-    direction_id INTEGER,
-    block_id TEXT,
     shape_id TEXT,
-    wheelchair_accessible INTEGER,
-    bikes_allowed INTEGER
+    trip_headsign TEXT,
+    direction_id INTEGER
 );
 
 -- Calendar (service days)
@@ -72,17 +55,13 @@ CREATE TABLE IF NOT EXISTS calendar (
 
 -- Stop times (ordered stops per trip)
 CREATE TABLE IF NOT EXISTS stop_times (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     trip_id TEXT REFERENCES trips(trip_id),
+    stop_sequence INTEGER,
+    stop_id TEXT REFERENCES stops(stop_id),
     arrival_time TIME,
     departure_time TIME,
-    stop_id TEXT REFERENCES stops(stop_id),
-    stop_sequence INTEGER,
-    stop_headsign TEXT,
-    pickup_type INTEGER,
-    drop_off_type INTEGER,
-    shape_dist_traveled DOUBLE PRECISION,
-    timepoint INTEGER
+    timepoint INTEGER,
+    PRIMARY KEY (trip_id, stop_sequence)
 );
 
 -- Indexes for fast lookup
@@ -96,6 +75,5 @@ CREATE TABLE IF NOT EXISTS shapes (
     shape_pt_lat DOUBLE PRECISION,
     shape_pt_lon DOUBLE PRECISION,
     shape_pt_sequence INTEGER,
-    shape_dist_traveled DOUBLE PRECISION,
     PRIMARY KEY (shape_id, shape_pt_sequence)
 );

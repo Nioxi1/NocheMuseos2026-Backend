@@ -22,8 +22,8 @@ DB_PASS = os.environ.get('DB_PASS', '')
 
 OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
 TIMEOUT_SECONDS = 180
-BBOX = '-17.5,-66.25,-17.3,-66.05'  # Cercado Cochabamba approximate bounding box
-ROUTE_TYPES = ['bus', 'tram', 'trolleybus', 'train', 'subway', 'light_rail', 'ferry']
+BBOX = '-17.6,-66.3,-17.2,-66.0'  # Área más amplia de Cochabamba
+ROUTE_TYPES = ['bus']  # Solo buses primero
 
 
 class OverpassImportError(Exception):
@@ -52,7 +52,15 @@ def query_overpass() -> List[Dict]:
 out tags geom;
 """
 
-    response = requests.post(OVERPASS_URL, data={'data': query}, timeout=TIMEOUT_SECONDS)
+    response = requests.get(
+        OVERPASS_URL, 
+        params={'data': query}, 
+        timeout=TIMEOUT_SECONDS,
+        headers={
+            'Accept': 'application/json',
+            'User-Agent': 'NocheMuseos/1.0 (https://github.com/noche-museos; contacto@nochemuseos.bo)'
+        }
+    )
     if response.status_code != 200:
         raise OverpassImportError(
             f'Overpass API returned status {response.status_code}: {response.text[:200]}'
