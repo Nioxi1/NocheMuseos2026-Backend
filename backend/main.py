@@ -40,6 +40,10 @@ class RutasRequest(BaseModel):
     origen: dict  # { 'lat': float, 'lng': float }
     museos: List[MuseoPydantic]
 
+class TransportPublicoRequest(BaseModel):
+    origen: dict # { 'lat': float, 'lng': float }
+    destino: dict # { 'lat': float, 'lng': float }
+
 agente_transporte = AgenteTransporte()
 agente_buscador = AgenteBuscador()
 agente_guia = AgenteGuia()
@@ -173,6 +177,21 @@ def museo_cercano(lat: float, lng: float):
             return {"message": "No encontré museos con coordenadas en la base de datos MuseosCochabamba."}
         rutas = agente_guia.obtener_rutas_por_museo(m['id'])
         return {"museo": m, "rutas": [r['nombre'] for r in rutas] if rutas else [], "distancia_m": m.get('distancia_m')}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/transporte_publico")
+def transporte_publico(request: TransportPublicoRequest):
+    """Obtiene la mejor ruta de transporte público entre dos puntos."""
+    try:
+        resultado = agente_transporte.buscar_transporte_publico(
+            request.origen['lat'], request.origen['lng'],
+            request.destino['lat'], request.destino['lng']
+        )
+        if resultado:
+            return resultado
+        else:
+            raise HTTPException(status_code=404, detail="No se encontró una ruta de transporte público cercana para este trayecto.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

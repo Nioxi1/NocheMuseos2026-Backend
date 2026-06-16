@@ -1,0 +1,42 @@
+
+TABLE museos:
+  id                   integer
+  nombre               character varying
+  direccion            text
+  latitud              numeric
+  longitud             numeric
+
+TABLE rutas:
+  id                   integer
+  osm_id               bigint
+  nombre               character varying
+  referencia           character varying
+  tipo                 character varying
+
+TABLE puntos_ruta:
+  id                   integer
+  ruta_id              integer
+  latitud              numeric
+  longitud             numeric
+  orden_punto          integer
+
+TABLE museo_rutas:
+  museo_id             integer
+  ruta_id              integer
+
+--- EXISTING DATA ---
+rutas: 620 rows
+puntos_ruta: 449757 rows
+museo_rutas: 0 rows
+
+--- SAMPLE RUTAS ---
+{'id': 1, 'osm_id': 4204592, 'nombre': 'MiniBus 270: Tupuraya → Avenida Blanco Galindo', 'referencia': '270', 'tipo': 'Minibus'}
+{'id': 2, 'osm_id': 4205962, 'nombre': 'MiniBus 260: Avenida Blanco Galindo → Calle Litoral', 'referencia': '260', 'tipo': 'Minibus'}
+{'id': 3, 'osm_id': 4207829, 'nombre': 'MiniBus 201: Avenida Blanco Galindo → Calle Litoral', 'referencia': '201', 'tipo': 'Minibus'}
+{'id': 4, 'osm_id': 4220716, 'nombre': 'MiniBus 205: MiniBus 205: Avenida Belzu → Plaza Avenida Blanco Galindo', 'referencia': '205', 'tipo': 'Minibus'}
+{'id': 5, 'osm_id': 4223772, 'nombre': 'MiniBus 270: Calle Jose Martinez → Avenida Blanco Galindo', 'referencia': '270', 'tipo': 'Minibus'}
+{'id': 6, 'osm_id': 4237142, 'nombre': 'MiniBus 260: Calle Litoral → Avenida Blanco Galindo', 'referencia': '260', 'tipo': 'Minibus'}
+{'id': 7, 'osm_id': 4247869, 'nombre': 'MicroBus B: Calle Las Buganvillas → Pasaje F', 'referencia': 'B', 'tipo': 'Micro'}
+{'id': 8, 'osm_id': 4269608, 'nombre': 'MicroBus A: Villa Israel → Río Taquiña', 'referencia': 'A', 'tipo': 'Micro'}
+{'id': 9, 'osm_id': 4269609, 'nombre': 'MicroBus A: Río Taquiña → Villa Israel', 'referencia': 'A', 'tipo': 'Micro'}
+{'id': 10, 'osm_id': 4420888, 'nombre': 'MicroBus 203: Avenida Belzu → Plaza Hernando Siles', 'referencia': '203', 'tipo': 'Micro'}
