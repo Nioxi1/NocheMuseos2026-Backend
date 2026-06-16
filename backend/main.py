@@ -47,6 +47,8 @@ class TransportPublicoRequest(BaseModel):
 agente_transporte = AgenteTransporte()
 agente_buscador = AgenteBuscador()
 agente_guia = AgenteGuia()
+# Register the Transporte router generated inside AgenteTransporte
+app.include_router(agente_transporte.router)
 
 @app.get("/")
 def read_root():

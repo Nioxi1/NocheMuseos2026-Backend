@@ -3,6 +3,13 @@ import requests
 from geopy.distance import geodesic
 from backend.db import query, query_one
 import math
+import os
+import pandas as pd
+from fastapi import APIRouter, HTTPException
+from dotenv import load_dotenv
+
+load_dotenv()
+router = APIRouter()
 
 class AgenteTransporte:
     """
@@ -12,6 +19,7 @@ class AgenteTransporte:
     def __init__(self):
         # geolocator para convertir textos a coordenadas
         self.geolocator = Nominatim(user_agent="noche_museos_app")
+        self.gtfs_path = os.getenv("GTFS_PATH")
 
     def geocodificar_direccion(self, direccion: str):
         # Agregar "Cochabamba, Bolivia" para asegurar que busca localmente
