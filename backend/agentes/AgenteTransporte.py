@@ -57,25 +57,35 @@ class AgenteTransporte:
         puntos.append(origen)
         
         # Llamar a OSRM para obtener la polilínea y la distancia/tiempo real
-        coordenadas_str = ";".join([f"{p['lng']},{p['lat']}" for p in puntos])
-        
-        try:
-            url = f"http://router.project-osrm.org/route/v1/driving/{coordenadas_str}?overview=full&geometries=geojson"
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                if data['routes']:
-                    ruta = data['routes'][0]
-                    return {
-                        "geometry": ruta['geometry'],
-                        "distance": ruta['distance'], # en metros
-                        "duration": ruta['duration'], # en segundos
-                        "orden": [m.nombre for m in ruta_ordenada]
-                    }
-        except Exception as e:
-            print("Error llamando a OSRM:", e)
-        
-        # Si falla OSRM, devolvemos las coordenadas simples para dibujar líneas rectas
+        # Asegurarse de que las coordenadas estén en formato float y en orden lon,lat
+        coordenadas_str = ";".join([f"{float(p['lng'])},{float(p['lat'])}" for p in puntos])
+
+        url = f"http://router.project-osrm.org/route/v1/driving/{coordenadas_str}?overview=full&geometries=geojson"
+        # Intentos y timeout para mejorar resiliencia
+        for attempt in range(1, 4):
+            try:
+                response = requests.get(url, timeout=6)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('routes'):
+                        ruta = data['routes'][0]
+                        return {
+                            "geometry": ruta['geometry'],
+                            "distance": ruta.get('distance', 0), # en metros
+                            "duration": ruta.get('duration', 0), # en segundos
+                            "orden": [m.nombre for m in ruta_ordenada]
+                        }
+                    else:
+                        # Respuesta OK pero sin rutas; intentamos nuevamente
+                        print(f"OSRM returned no routes (attempt {attempt}). Response: {data}")
+                else:
+                    # Log detallado para depuración remota
+                    print(f"OSRM status {response.status_code} (attempt {attempt}): {response.text}")
+            except Exception as e:
+                print(f"Error llamando a OSRM (attempt {attempt}):", e)
+
+        # Si falla OSRM después de reintentos, devolvemos las coordenadas simples (líneas rectas)
+        # Esto evita romper la aplicación, pero indica que OSRM no estuvo disponible.
         return {
             "geometry": {
                 "type": "LineString",

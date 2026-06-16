@@ -4,3 +4,4 @@ geopy
 pydantic
 requests
 fastapi-cors
+psycopg2-binary
