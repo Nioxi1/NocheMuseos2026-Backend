@@ -195,6 +195,103 @@ def transporte_publico(request: TransportPublicoRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class PlanificarRequest(BaseModel):
+    origen: dict # { 'lat': float, 'lng': float }
+    presupuesto: float
+    tiempo: float
+
+@app.get("/api/museos")
+def get_all_museos():
+    """Obtiene todos los museos desde la base de datos."""
+    try:
+        sql = "SELECT id, nombre, categoria, precio, tiempo_estimado, latitud as lat, longitud as lng, imagen_url, descripcion, horario_apertura, horario_cierre FROM museos ORDER BY nombre"
+        rows = agente_guia.query(sql) # Using query from db via agente_guia or directly
+        
+        # Format for frontend
+        result = []
+        for r in rows:
+            result.append({
+                "id": str(r['id']),
+                "nombre": r['nombre'],
+                "categoria": r['categoria'],
+                "precio": float(r['precio']) if r['precio'] else 0,
+                "tiempoEstimado": float(r['tiempo_estimado']) if r['tiempo_estimado'] else 0,
+                "coordenadas": {"lat": float(r['lat']), "lng": float(r['lng'])},
+                "imagenUrl": r['imagen_url'],
+                "descripcion": r['descripcion'],
+                "horarioApertura": r['horario_apertura'],
+                "horarioCierre": r['horario_cierre']
+            })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/planificar")
+def planificar_tour(request: PlanificarRequest):
+    """Genera un plan de visita optimizado basado en presupuesto y tiempo."""
+    try:
+        # 1. Obtener museos
+        museos = get_all_museos()
+        # Acomodar para AgenteBuscador (aplanar coordenadas)
+        museos_fmt = []
+        for m in museos:
+            m_copy = m.copy()
+            m_copy['lat'] = m['coordenadas']['lat']
+            m_copy['lng'] = m['coordenadas']['lng']
+            museos_fmt.append(m_copy)
+
+        # 2. Planificar
+        seleccionados = agente_buscador.planificar_visita(
+            request.origen, museos_fmt, request.presupuesto, request.tiempo
+        )
+
+        if not seleccionados:
+            return {"message": "No se encontraron museos que se ajusten a tus restricciones.", "museos": []}
+
+        # 3. Obtener ruta OSRM y transporte para cada tramo
+        # Para simplificar, obtenemos la ruta completa y el transporte entre cada punto
+        puntos = [request.origen] + [{'lat': m['lat'], 'lng': m['lng']} for m in seleccionados]
+        
+        museos_pydantic = [
+            type('Museo', (), {
+                'lat': m['lat'],
+                'lng': m['lng'],
+                'nombre': m['nombre'],
+                'precio': m['precio'],
+                'tiempoEstimado': m['tiempoEstimado']
+            })() for m in seleccionados
+        ]
+        
+        ruta_info = agente_transporte.calcular_ruta_osrm(request.origen, museos_pydantic)
+        
+        tramos_transporte = []
+        for i in range(len(puntos) - 1):
+            p1 = puntos[i]
+            p2 = puntos[i+1]
+            transporte = agente_transporte.buscar_transporte_publico(p1['lat'], p1['lng'], p2['lat'], p2['lng'])
+            if transporte:
+                tramos_transporte.append({
+                    "desde": "Origen" if i == 0 else seleccionados[i-1]['nombre'],
+                    "hasta": seleccionados[i]['nombre'],
+                    "transporte": transporte
+                })
+
+        return {
+            "museos": seleccionados,
+            "ruta": ruta_info,
+            "transporte": tramos_transporte,
+            "resumen": {
+                "total_museos": len(seleccionados),
+                "presupuesto_estimado": sum(m['precio'] for m in seleccionados) + (len(seleccionados) * 2),
+                "tiempo_estimado_total": sum(m['tiempoEstimado'] for m in seleccionados) + (ruta_info['duration'] / 3600 if ruta_info else 0)
+            }
+        }
+    except Exception as e:
+        print("Error en /api/planificar:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
+
+
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

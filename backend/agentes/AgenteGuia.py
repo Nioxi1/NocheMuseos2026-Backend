@@ -20,7 +20,14 @@ class AgenteGuia:
     Regla: usar solo tablas `museos`, `rutas`, `puntos_ruta`, `museo_rutas`.
     """
 
+    def query(self, sql: str, params: tuple = None):
+        return query(sql, params)
+
+    def query_one(self, sql: str, params: tuple = None):
+        return query_one(sql, params)
+
     def buscar_museo_por_nombre(self, nombre: str) -> Optional[Dict]:
+
         sql = """
         SELECT id, nombre, lat, lng, direccion
         FROM museos
