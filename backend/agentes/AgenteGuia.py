@@ -29,7 +29,7 @@ class AgenteGuia:
     def buscar_museo_por_nombre(self, nombre: str) -> Optional[Dict]:
 
         sql = """
-        SELECT id, nombre, lat, lng, direccion
+        SELECT id, nombre, lat, lng, direccion, actividades
         FROM museos
         WHERE LOWER(nombre) = LOWER(%s)
         LIMIT 1
@@ -49,7 +49,7 @@ class AgenteGuia:
         return [dict(r) for r in rows] if rows else []
 
     def buscar_museo_mas_cercano(self, lat: float, lng: float) -> Optional[Dict]:
-        sql = "SELECT id, nombre, lat, lng, direccion FROM museos WHERE lat IS NOT NULL AND lng IS NOT NULL"
+        sql = "SELECT id, nombre, lat, lng, direccion, actividades FROM museos WHERE lat IS NOT NULL AND lng IS NOT NULL"
         rows = query(sql)
         if not rows:
             return None

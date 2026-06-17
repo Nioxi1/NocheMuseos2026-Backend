@@ -205,7 +205,7 @@ class PlanificarRequest(BaseModel):
 def get_all_museos():
     """Obtiene todos los museos desde la base de datos."""
     try:
-        sql = "SELECT id, nombre, categoria, precio, tiempo_estimado, latitud as lat, longitud as lng, imagen_url, descripcion, horario_apertura, horario_cierre FROM museos ORDER BY nombre"
+        sql = "SELECT id, nombre, categoria, precio, tiempo_estimado, latitud as lat, longitud as lng, imagen_url, descripcion, horario_apertura, horario_cierre, actividades FROM museos ORDER BY nombre"
         rows = agente_guia.query(sql) # Using query from db via agente_guia or directly
         
         # Format for frontend
@@ -221,7 +221,8 @@ def get_all_museos():
                 "imagenUrl": r['imagen_url'],
                 "descripcion": r['descripcion'],
                 "horarioApertura": r['horario_apertura'],
-                "horarioCierre": r['horario_cierre']
+                "horarioCierre": r['horario_cierre'],
+                "actividades": r['actividades']
             })
         return result
     except Exception as e:

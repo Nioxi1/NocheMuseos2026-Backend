@@ -54,9 +54,4 @@ def import_museums(file_path):
 
     print(f"Importación de museos finalizada. Total: {count}")
 
-if __name__ == "__main__":
-    path = r"c:\Users\Admin\Desktop\IA 2\osm_museums.json"
-    if not os.path.exists(path):
-        print(f"Error: No se encontró el archivo en {path}")
-    else:
-        import_museums(path)
+
