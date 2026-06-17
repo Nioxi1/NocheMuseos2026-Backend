@@ -44,16 +44,28 @@ class AgenteTransporte:
             min_dist = float('inf')
             
             for m in restantes:
+                # Soporte para objeto (.lat) o diccionario (['lat'])
+                m_lat = m.lat if hasattr(m, 'lat') else m.get('lat')
+                m_lng = m.lng if hasattr(m, 'lng') else m.get('lng')
+                
+                if m_lat is None or m_lng is None: continue
+
                 # Usamos geopy para medir la distancia en linea recta para el ordenamiento
-                dist = geodesic((actual['lat'], actual['lng']), (m.lat, m.lng)).meters
+                dist = geodesic((actual['lat'], actual['lng']), (m_lat, m_lng)).meters
                 if dist < min_dist:
                     min_dist = dist
                     mas_cercano = m
             
-            ruta_ordenada.append(mas_cercano)
-            puntos.append({'lat': mas_cercano.lat, 'lng': mas_cercano.lng})
+            if not mas_cercano: break
+            
+            m_lat = mas_cercano.lat if hasattr(mas_cercano, 'lat') else mas_cercano.get('lat')
+            m_lng = mas_cercano.lng if hasattr(mas_cercano, 'lng') else mas_cercano.get('lng')
+            m_nombre = mas_cercano.nombre if hasattr(mas_cercano, 'nombre') else mas_cercano.get('nombre', 'Museo')
+
+            ruta_ordenada.append(m_nombre)
+            puntos.append({'lat': m_lat, 'lng': m_lng})
             restantes.remove(mas_cercano)
-            actual = {'lat': mas_cercano.lat, 'lng': mas_cercano.lng}
+            actual = {'lat': m_lat, 'lng': m_lng}
             
         # Volver al origen
         puntos.append(origen)
@@ -62,7 +74,7 @@ class AgenteTransporte:
         # Asegurarse de que las coordenadas estén en formato float y en orden lon,lat
         coordenadas_str = ";".join([f"{float(p['lng'])},{float(p['lat'])}" for p in puntos])
 
-        url = f"http://router.project-osrm.org/route/v1/driving/{coordenadas_str}?overview=full&geometries=geojson"
+        url = f"http://router.project-osrm.org/route/v1/driving/{coordenadas_str}?overview=full&geometries=geojson&annotations=true"
         # Intentos y timeout para mejorar resiliencia
         for attempt in range(1, 4):
             try:
@@ -73,15 +85,14 @@ class AgenteTransporte:
                         ruta = data['routes'][0]
                         return {
                             "geometry": ruta['geometry'],
-                            "distance": ruta.get('distance', 0), # en metros
-                            "duration": ruta.get('duration', 0), # en segundos
-                            "orden": [m.nombre for m in ruta_ordenada]
+                            "distance": ruta.get('distance', 0),
+                            "duration": ruta.get('duration', 0),
+                            "orden": ruta_ordenada,
+                            "legs": ruta.get('legs', [])
                         }
                     else:
-                        # Respuesta OK pero sin rutas; intentamos nuevamente
                         print(f"OSRM returned no routes (attempt {attempt}). Response: {data}")
                 else:
-                    # Log detallado para depuración remota
                     print(f"OSRM status {response.status_code} (attempt {attempt}): {response.text}")
             except Exception as e:
                 print(f"Error llamando a OSRM (attempt {attempt}):", e)
@@ -95,7 +106,7 @@ class AgenteTransporte:
             },
             "distance": 0,
             "duration": 0,
-            "orden": [m.nombre for m in ruta_ordenada]
+            "orden": ruta_ordenada
         }
 
     def buscar_transporte_publico(self, origen_lat, origen_lng, destino_lat, destino_lng):

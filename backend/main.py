@@ -112,8 +112,8 @@ def autocomplete(query: str):
 def calcular_ruta(request: RutasRequest):
     """Calculate optimal route visiting selected museums from origin."""
     try:
-        # Convert Pydantic models to format expected by AgenteTransporte
-        museos_format = [
+        # 1. Obtener la ruta óptima pasando por todos los museos y regresando al origen
+        museos_pydantic = [
             type('Museo', (), {
                 'lat': m.lat,
                 'lng': m.lng,
@@ -123,7 +123,8 @@ def calcular_ruta(request: RutasRequest):
             })() for m in request.museos
         ]
         
-        resultado = agente_transporte.calcular_ruta_osrm(request.origen, museos_format)
+        # El AgenteTransporte ya se encarga de cerrar el circuito internamente
+        resultado = agente_transporte.calcular_ruta_osrm(request.origen, museos_pydantic)
         if resultado:
             return resultado
         else:
@@ -249,8 +250,8 @@ def planificar_tour(request: PlanificarRequest):
             return {"message": "No se encontraron museos que se ajusten a tus restricciones.", "museos": []}
 
         # 3. Obtener ruta OSRM y transporte para cada tramo
-        # Para simplificar, obtenemos la ruta completa y el transporte entre cada punto
-        puntos = [request.origen] + [{'lat': m['lat'], 'lng': m['lng']} for m in seleccionados]
+        # Puntos para tramos de transporte (incluyendo vuelta al origen)
+        puntos = [request.origen] + [{'lat': m['lat'], 'lng': m['lng']} for m in seleccionados] + [request.origen]
         
         museos_pydantic = [
             type('Museo', (), {
@@ -262,17 +263,25 @@ def planificar_tour(request: PlanificarRequest):
             })() for m in seleccionados
         ]
         
-        ruta_info = agente_transporte.calcular_ruta_osrm(request.origen, museos_pydantic)
+        # Para el cálculo de la ruta completa, incluimos el retorno al origen
+        puntos_ruta = seleccionados + [request.origen]
+        ruta_info = agente_transporte.calcular_ruta_osrm(request.origen, puntos_ruta)
         
         tramos_transporte = []
         for i in range(len(puntos) - 1):
             p1 = puntos[i]
             p2 = puntos[i+1]
+            
+            # Es el tramo de vuelta si el destino (p2) es el origen inicial
+            # Pero hay que tener cuidado: puntos[0] es el origen. puntos[-1] es el origen (regreso).
+            es_vuelta = (i == len(puntos) - 2)
+            
             transporte = agente_transporte.buscar_transporte_publico(p1['lat'], p1['lng'], p2['lat'], p2['lng'])
             if transporte:
                 tramos_transporte.append({
                     "desde": "Origen" if i == 0 else seleccionados[i-1]['nombre'],
-                    "hasta": seleccionados[i]['nombre'],
+                    "hasta": "Origen (Retorno)" if es_vuelta else seleccionados[i]['nombre'],
+                    "es_vuelta": es_vuelta,
                     "transporte": transporte
                 })
 
@@ -282,7 +291,7 @@ def planificar_tour(request: PlanificarRequest):
             "transporte": tramos_transporte,
             "resumen": {
                 "total_museos": len(seleccionados),
-                "presupuesto_estimado": sum(m['precio'] for m in seleccionados) + (len(seleccionados) * 2),
+                "presupuesto_estimado": sum(m['precio'] for m in seleccionados) + ((len(seleccionados) + 1) * 3),
                 "tiempo_estimado_total": sum(m['tiempoEstimado'] for m in seleccionados) + (ruta_info['duration'] / 3600 if ruta_info else 0)
             }
         }
